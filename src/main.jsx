@@ -1,22 +1,20 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 
-export default class ReactPostfixInput extends Component {
+export default class FluidInput extends Component {
   static propTypes = {
     type: PropTypes.string,
     placeholder: PropTypes.string,
     postfix: PropTypes.string,
     onChanged: PropTypes.func,
     inputFormat: PropTypes.func,
-    isOnlyDigits: PropTypes.bool
+    outputFormat: PropTypes.func
   }
 
   constructor(props) {
     super(props)
-    this.state = { value: '' }
+    this.state = { local: '', output: '' }
   }
-
-  removeNonDigitsChar = (val = '') => val.toString().replace(/[^0-9]/g, "")
 
   updateCaretPosition = (newVal, value, target, selectionStart, selectionEnd) => {
     const lengthDiff = newVal.length - value.length
@@ -37,26 +35,45 @@ export default class ReactPostfixInput extends Component {
     const {
       isOnlyDigits,
       inputFormat,
+      outputFormat,
       onChanged
     } = this.props
 
-    let newVal = value
-    if (isOnlyDigits) newVal = this.removeNonDigitsChar(newVal)
-    if (inputFormat) newVal = inputFormat(newVal, this.state)
+    const {
+      local,
+      output
+    } = this.state
+
+    let formattedInputVal
+    let formattedOutputVal
+
+    if (inputFormat) {
+      formattedInputVal = inputFormat(value, local)
+      if (formattedInputVal && formattedInputVal !== 0) {
+        if (formattedInputVal !== local) this.setState({ local: formattedInputVal }, () => target.setSelectionRange(selectionStart, selectionEnd))
+      }
+    }
+
+    // if (outputFormat) {
+    //   formattedOutputVal = outputFormat(value, output)
+    //   if (formattedOutputVal && formattedOutputVal !== 0) {
+    //     if (formattedOutputVal !== output) this.setState({ output: formattedOutputVal })
+    //   }
+    // }
 
     this.setState(
-      { value: newVal },
-      () => this.updateCaretPosition(newVal, value, target, selectionStart, selectionEnd)
+      { local: formattedInputVal },
+      () => this.updateCaretPosition(formattedInputVal, value, target, selectionStart, selectionEnd)
     )
 
-    onChanged(newVal)
+    onChanged(output)
   }
 
   render() {
     const placeholder = this.props.placeholder || ''
     const type = this.props.type || 'text'
-    const value = this.state.value
-    const isHidden = value.length === 0
+    const localValue = this.state.local
+    const isHidden = localValue.length === 0
     const HIDDEN = 'hidden'
 
     return (
@@ -65,13 +82,13 @@ export default class ReactPostfixInput extends Component {
           <input
             className="fluid-input__input"
             type={type}
-            value={value}
+            value={localValue}
             placeholder={placeholder}
             onChange={event => this.update(event.target)}
           />
         </div>
         <div className={`fluid-input__shadowValue ${(isHidden) ? HIDDEN : ''}`}>
-          <span className="shadow">{value}</span>
+          <span className="shadow">{localValue}</span>
           <span className="postfix">{this.props.postfix}</span>
         </div>
       </div>
